@@ -36,24 +36,28 @@ function scope -a scope -d "pretty print variables, e.g. `set --global --long | 
         set -l value (string split "  " -- $values[$i])
         set -l n_items (count $value)
         set -l indent ""
-        test $n_items -gt 1; and set indent (string repeat --count 4 " ")
+        # test $n_items -gt 1; and set indent (string repeat --count 4 " ")
 
         if test "$value" = ""
             # The variable is defined but has not been assigned a value
             printf "%s%s%s = \n" $red $var $reset
             continue
-        else
+        else if test $n_items -eq 1
             printf "%s%s%s = " $bold $vars[$i] $reset
         end
-        if test $n_items -gt 1
-            printf "{\n"
-        end
+        # if test $n_items -gt 1
+        #     printf "{\n"
+        # end
 
         for j in (seq $n_items)
-            # set -l value $values[$i]
             set -l item $value[$j]
             printf "%s" $indent
-            test $n_items -gt 1; and printf "[%s%d%s] = " $yellow $j $reset
+            if test $n_items -gt 1
+                printf "%s%s%s" $bold $var $reset
+                printf "[%s%d%s] = " $yellow $j $reset
+            end
+
+            # test $n_items -gt 1; and printf "[%s%d%s] = " $yellow $j $reset
             if string match --quiet "fish_*color_*" -- $var
                 # Assume that the value is a hex color
                 printf "%s%s%s\n" (set_color $value) $value $reset
@@ -66,8 +70,8 @@ function scope -a scope -d "pretty print variables, e.g. `set --global --long | 
             end
         end
 
-        if test $n_items -gt 1
-            printf "}\n"
-        end
-    end
+        # if test $n_items -gt 1
+        #     printf "}\n"
+        # end
+    end # | column --table --separater =
 end
