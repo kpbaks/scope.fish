@@ -10,6 +10,28 @@ function scope -a scope -d "pretty print variables, e.g. `set --global --long | 
     set -l underline (set_color --underline)
     set -l italic (set_color --italics)
 
+    set -l options h/help # a/align
+    if not argparse $options -- $argv
+        eval (status function) --help
+        return 2
+    end
+
+    if set --query _flag_help
+        printf "%spretty print variables%s\n" $bold $reset >&2
+        printf "\n" >&2
+        printf "%sUSAGE:%s\n" $green $reset >&2
+        for scope in local function global universal export
+            printf "\t" >&2
+            echo "set --$scope --long | scope" | fish_indent --ansi
+        end
+        printf "\n" >&2
+        printf "%sOPTIONS:%s\n" $green $reset >&2
+        printf "\t%s-h%s, %s--help%s Show this help message\n" $cyan $reset $cyan $reset >&2
+
+        # TODO: add a footer
+        return 0
+    end
+
     if isatty stdin
         printf "%serror:%s stdin should be a %spipe%s not a %stty%s\n" $red $reset $bold $reset $red $reset
         printf "try:\n"
@@ -20,19 +42,11 @@ function scope -a scope -d "pretty print variables, e.g. `set --global --long | 
         return 2
     end
 
-    if not argparse h/help a/align
-        eval (status function) --help
-        return 2
-    end
-
-    if set --query _flag_help
-        echo todo
-        return 0
-    end
 
     set -l vars
     set -l values
     while read name value
+        # Read piped input
         set --append vars $name
         set --append values $value
     end
@@ -68,7 +82,6 @@ function scope -a scope -d "pretty print variables, e.g. `set --global --long | 
                 printf "[%s%d%s] = " $yellow $j $reset
             end
 
-            # test $n_items -gt 1; and printf "[%s%d%s] = " $yellow $j $reset
             if string match --quiet "fish_*color_*" -- $var
                 # Assume that the value is a hex color, or another format accepted by `set_color`
                 printf "%s%s%s\n" (set_color $value) $value $reset
@@ -85,12 +98,12 @@ function scope -a scope -d "pretty print variables, e.g. `set --global --long | 
                     set item (string replace --regex "^~" "$HOME" -- $item) # test will not expand the `~` to `$HOME`, so we have to do it.
                     # Check if the string is a file path, and if so if it exists on the file system
                     if test -e "$item"
-                        printf "%s%s%s exists\n" $green $item $reset
+                        printf "%s%s%s (exists %s✓%s)\n" (set_color --bold --italic green) $item $reset $green $reset
                     else
-                        printf "%s%s%s\n" $red $item $reset
+                        printf "%s%s%s (does NOT exist %s✗%s)\n" $red $item $reset $red $reset
                     end
                 else
-                    printf '%s%s%s\n' $green $item $reset
+                    printf '%s%s%s\n' $magenta $item $reset
                 end
             end
         end

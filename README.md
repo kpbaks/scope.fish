@@ -2,6 +2,8 @@
 
 Pretty print fish variables of a specific scope level.
 
+<!-- todo: add a screenshot -->
+
 ## Installation
 ```fish
 fisher install kpbaks/scope.fish
