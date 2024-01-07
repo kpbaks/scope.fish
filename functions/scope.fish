@@ -13,11 +13,21 @@ function scope -a scope -d "pretty print variables, e.g. `set --global --long | 
     if isatty stdin
         printf "%serror:%s stdin should be a %spipe%s not a %stty%s\n" $red $reset $bold $reset $red $reset
         printf "try:\n"
-        for scope in local function global universal
+        for scope in local function global universal export
             printf "\t"
             echo "set --$scope --long | scope" | fish_indent --ansi
         end
         return 2
+    end
+
+    if not argparse h/help a/align
+        eval (status function) --help
+        return 2
+    end
+
+    if set --query _flag_help
+        echo todo
+        return 0
     end
 
     set -l vars
@@ -40,6 +50,7 @@ function scope -a scope -d "pretty print variables, e.g. `set --global --long | 
 
         if test "$value" = ""
             # The variable is defined but has not been assigned a value
+            # TODO: make it more clear in the output
             printf "%s%s%s = \n" $red $var $reset
             continue
         else if test $n_items -eq 1
@@ -59,14 +70,28 @@ function scope -a scope -d "pretty print variables, e.g. `set --global --long | 
 
             # test $n_items -gt 1; and printf "[%s%d%s] = " $yellow $j $reset
             if string match --quiet "fish_*color_*" -- $var
-                # Assume that the value is a hex color
+                # Assume that the value is a hex color, or another format accepted by `set_color`
                 printf "%s%s%s\n" (set_color $value) $value $reset
             else if string match --quiet --regex "^-?\d+\.?\d*\$" -- $item
-                # Item is a digit
+                # Item is a number like `10` or `34.42`
                 printf "%s%s%s\n" $blue $item $reset
             else
-                # TODO: check if the string is a file path, and if so if it exists on the file system
-                printf '%s%s%s\n' $green $item $reset
+                if test "$(string sub --length=1 $item)" = "'" -a "$(string sub --length=1 --start=-1 $item)" = "'"
+                    # TODO: why?
+                    set item (string sub --start=2 --end=-1 $item)
+                end
+                if contains -- (string sub --length=1 $item) / "~"
+                    # Assume it is a file/directory
+                    set item (string replace --regex "^~" "$HOME" -- $item) # test will not expand the `~` to `$HOME`, so we have to do it.
+                    # Check if the string is a file path, and if so if it exists on the file system
+                    if test -e "$item"
+                        printf "%s%s%s exists\n" $green $item $reset
+                    else
+                        printf "%s%s%s\n" $red $item $reset
+                    end
+                else
+                    printf '%s%s%s\n' $green $item $reset
+                end
             end
         end
 
@@ -74,4 +99,5 @@ function scope -a scope -d "pretty print variables, e.g. `set --global --long | 
         #     printf "}\n"
         # end
     end # | column --table --separater =
+    # TODO: figure out how to align properly
 end
